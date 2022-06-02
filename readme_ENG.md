@@ -65,7 +65,7 @@ The required MicroPython libraries must be copied to the MicroPython board befor
 
 The Pololu Zumo Arduino based libraries have been ported to MicroPython. __The function names and method named have been preserved from C naming convention into the MicroPython implementation__, this will help arduino users to migrate to MicroPython.
 
-* [zumoshield.py](lib/zumoshield.py) : drive the Zumo motors and Zumo's line follower.
+* [zumoshield.py](lib/zumoshield.py) : drive the Zumo motors + interface to line followeer, Buzzer, Zumo button, Zumo LED, microcontroler LED and I2C bus.
 * [pushbutton.py](lib/pushbutton.py) : helper functions for buttons.
 * [zumobuzzer.py](lib/zumobuzzer.py) : Zumo buzzer helper.
 * [lsm303.py](lib/lsm303.py) : Helper for the 3 axis accelerometer/magnetometer.
@@ -76,20 +76,18 @@ The Pololu Zumo Arduino based libraries have been ported to MicroPython. __The f
 
 ## Zumo  default state
 
-When the Pyboard is turned on, all the PINs are activated as input, as a result, one (or both) of the motors will start spining.
-
-This can be very annoying when plugging the Pyboard to a computer then powering it up with the battery switch.
+When the microcontroler is turned on, all the PINs are activated as input with pull-up. This result into one (or both) of the motors starts spining.
 
 _We do need to initialize the motor pins__ as soon as possible to avoids the zumo to start running away when testing your code.
 
-That can be done with 2 lines of codes to take in the REPL session (or at the begining of the `main.py` file).
+That can be done with 2 lines of codes inserted into the `main.py` file.
 
 ``` python
-from zumoshield import ZumoMotor
-motors = ZumoMotor()
+from zumoshield import ZumoShield
+z = ZumoShield()
 ```
 
-See the [examples/main.py](examples/main.py) script wich contains the minimalist code to quickly initialize the Zumo motor.
+See the [examples/main.py](examples/main.py) script wich contains the minimalist code to quickly initialize the Zumo.
 
 ## Driving the motors
 
@@ -102,91 +100,94 @@ The rear LEDs of the Zumo do light up.
 Pick up the following code in the REPL session to control the Zumo motors:
 
 ``` python
-from zumoshield import ZumoMotor
-motors=ZumoMotor()
+from zumoshield import ZumoShield
+z=ZumoShield()
 # Forward
-motors.setSpeeds( 200, 200 ) # -400..0..400
+z.motors.setSpeeds( 200, 200 ) # -400..0..400
 # Stop
-motors.setSpeeds( 0, 0 ) # -400..0..400
+z.motors.setSpeeds( 0, 0 ) # -400..0..400
 # backward
-motors.setSpeeds( -100, -100 ) # -400..0..400
-motors.setSpeeds( 0, 0 ) # -400..0..400
+z.motors.setSpeeds( -100, -100 ) # -400..0..400
+z.motors.setSpeeds( 0, 0 ) # -400..0..400
 ```
 
 The following show example how to invert the rotation of the right motor. So the Zumo will turn right.
 
 ``` python
-from zumoshield import ZumoMotor
+from zumoshield import ZumoShield
 from time import sleep
-motors=ZumoMotor()
+z=ZumoShield()
 # Forward
-motors.setSpeeds( 100, 100 ) # -400..0..400
+z.motors.setSpeeds( 100, 100 ) # -400..0..400
 # Turn right
-motors.flipRightMotor( True )
-motors.setSpeeds( 100, 100 ) # set the rotation speed
+z.motors.flipRightMotor( True )
+z.motors.setSpeeds( 100, 100 ) # set the rotation speed
 # Wait a second
 sleep( 1 )
 # Switch back to forward (when mentionning the speed)
-motors.flipRightMotor( False )
-motors.setSpeeds( 100, 100 )
+z.motors.flipRightMotor( False )
+z.motors.setSpeeds( 100, 100 )
 sleep( 1 )
 # Stop
-motors.setSpeeds( 0, 0 ) # -400..0..400
+z.motors.setSpeeds( 0, 0 ) # -400..0..400
 ```
 
-The `ZumoShield` class can be used to easily control the motors.
+Here an another example.
 
 ``` python
 from zumoshield import ZumoShield
-zumo = ZumoShield()
-zumo.motors.setSpeeds( 100, 100 ) # -400..0..400
-zumo.motors.stop()
+z = ZumoShield()
+z.motors.setSpeeds( 100, 100 ) # -400..0..400
+z.motors.stop()
 ```
 
 ## Buzzer
 
-Here some examples of code coming from [mazesolver.py](examples/mazesolver.py) to play some notes and tunes.
+Here some examples of code coming from [mazesolver.py](examples/mazesolver.py) and playing some notes and tunes.
 
 The tune syntax is described in the following Pololu's document for the [Zumo32U4Buzzer::play()](https://pololu.github.io/zumo-32u4-arduino-library/class_zumo32_u4_buzzer.html) method
 
 ``` python
-from zumobuzzer import PololuBuzzer
+from zumoshield import ZumoShield
 from time import sleep
 
-buzzer=PololuBuzzer()
-buzzer.play("c8")
+z=ZumoShield()
+z.buzzer.play("c8")
 sleep(2)
-buzzer.play(">g32>>c32")
+z.buzzer.play(">g32>>c32")
 sleep(2)
-buzzer.play("l16 cdegreg4")
+z.buzzer.play("l16 cdegreg4")
 sleep(2)
-buzzer.play(">>a32")
+z.buzzer.play(">>a32")
 sleep(2)
-buzzer.play(">>a32")
+z.buzzer.play(">>a32")
 ```
 You can also play notes with `playNote()` by indicating the Note, the Duration in ms and the Volume (0-15).
 
 The example here below comes from [borderdetect.py](examples/borderdetect.py) .
 
 ``` python
-from zumobuzzer import PololuBuzzer, NOTE_G
-buzzer = PololuBuzzer()
+from zumoshield import ZumoShield
+from zumobuzzer import NOTE_G
+z = ZumoShield()
 
 for x in range(3):
 		time.sleep(1)
-		# Note(octave), Duration, Volume
-		buzzer.playNote(NOTE_G(3),200,15)
+		# Note(octave), Durée, Volume
+		z.buzzer.playNote(NOTE_G(3),200,15)
 time.sleep(1)
-buzzer.playNote(NOTE_G(4),500,15)
+z.buzzer.playNote(NOTE_G(4),500,15)
 time.sleep(1)
 ```
 
-To finish, the `ZumoShield` class can be used to acces the buzzer.
+To finish, the `ZumoShield` class do have some predefined buzzer sequences.
 
 ``` python
 from zumoshield import ZumoShield
 zumo = Zumoshield()
-zumo.buzzer.play(">g32>>c32")
+zumo.play_blip()
+zumo.play_2tones()
+zumo.play_done()
 ```
 
 ## Zumo LED
@@ -198,80 +199,21 @@ The Zumo do have an orange USER LED labelled "LED 13".
 That LED is visible on the right side of the Zumo.
 
 ``` python
-from machine import Pin
-from zumoshield import LED_PIN
-from time import sleep
-
-led = Pin(LED_PIN, Pin.OUT) # Y6
-
-# Light up the LED on the right side of the Zumo
-led.value(1)
-sleep(2)
-led.value(0)
-```
-
-The `ZumoShield` class cal be used to directly access the LED and control it.
-
-``` python
 from zumoshield import ZumoShield
 zumo = ZumoShield()
 zumo.led.on()
 zumo.led.off()
 ```
 
-## Pyboard push-button
-
-The Pyboard-to-Zumo adapter do fit a USER button which is wired on the same Pyboard User button pin.
-
-``` python
-import pyb
-sw = pyb.Switch()
-while True:
-	if sw.value():
-		print( "Pressed" )
-	else:
-		print( "..." )
-```
-
-For more information on the `Switch` class, please see the [official MicroPython documentation](https://docs.micropython.org/en/latest/pyboard/tutorial/switch.html) .
-
 ## Zumo push button
 
-The Zumo's push button (next to the Zumo's On/OFF switch) is wired to the Pyboard "Y7" pin. The pin is tied to the ground when the button is pressed.
+The Zumo's push button (next to the Zumo's On/OFF switch) is wired to a microcontroler pin. The pin is tied to the ground when the button is pressed.
 
 ![Zumo button](docs/_static/zumo_button.jpg)
 
-The push button state can be directly read with the `Pin` and `Signal`.
+The Zumo button is also replicated on the adapter board.
 
-The `Signal` class is used to invert the logic of the signal.
-
-``` python
-from machine import Pin, Signal
-from zumoshield import BUTTON_PIN
-pin = Pin( BUTTON_PIN, Pin.IN, Pin.PULL_UP )
-btn = Signal( pin, invert=True )
-while True:
-	if btn.value():
-		print( "Pressed" )
-	else:
-		print( "..." )
-```
-
-The [pushbutton.py](lib/pushbutton.py) library do contains the `Pushbutton` class can be used to detect the button state or even advanced feature as "press and release" the button.
-
-``` python
-from pushbutton import Pushbutton
-from zumoshield import BUTTON_PIN
-
-# Zumo's button
-btn = Pushbutton( BUTTON_PIN )
-
-print( "Press and release the Zumo button" )
-btn.waitForButton()
-print( "Done" )
-```
-
-You can also access this button through the `ZumoShield` class (from [lib/zumoshield.py](lib/zumoshield.py) library).
+The [pushbutton.py](lib/pushbutton.py) library do contains the `Pushbutton` class can be used to detect the button state or even advanced feature as "press and release" the button. The class is made available through the `ZumoShield` (from [lib/zumoshield.py](lib/zumoshield.py) library).
 
 ``` python
 from zumoshield import ZumoShield
@@ -283,45 +225,11 @@ print( "Done" )
 ```
 ## Line follower
 
-The line follower present placed on the front of the Zumo is used to detect the presence and position of a black line (15mm large line).
+The line follower present placed on the front of the Zumo is used to detect the presence and position of a black line or white line (15mm large line).
 
 The following script do activates the Infrared lines of the Line Follower and to make multiple reads of the line position.
 
 ![position of the line](docs/_static/readLine.jpg)
-
-``` python
-# Stop the motor
-from zumoshield import ZumoMotor
-mot = ZumoMotor()
-
-# Test the infrared sensor
-#
-import time
-from zumoshield import ZumoReflectanceSensorArray
-ir = ZumoReflectanceSensorArray()
-
-# More the zumo over the black line with your hand during the
-# 10 steps calibration. This calibration will evaluates the black/white
-# contrast.
-#
-for i in range(10):
-	print( "Calibrate %i / 10" % (i+1) )
-	ir.calibrate()
-	time.sleep(0.5)
-
-# Read the line position
-#
-while True:
-    sensors = [0 for i in range(6)]
-    # With a Zumo blade going forward
-    #   Value from 500 to 4500 : line from left to right.
-    #   value 2500 : line centered under the sensor.
-    #   value 0 : line outside the sensor (on the left)
-    #   value 5000 : line outside the sensor (on the right)
-    position = ir.readLine( sensors )
-    print( 'Line position: ', position )
-    time.sleep( 1 )
-```
 
 The `ZumoShield` class can be used to access directly the infrared sensor.
 
@@ -346,7 +254,7 @@ while True:
     time.sleep( 1 )
 ```
 
-## Magnetometer reading
+## Magnetometer reading (TO REVIEW)
 
 The [test_mag.py](examples/test_mag.py) script (here below) make basic reading on the magnetometer. The code comes from [compass.py](examples/compass.py) (which calculate the orientation and makes the Zumo drawing square).
 
@@ -418,7 +326,7 @@ while True:
 
 __Note:__ due to the range of values, it is recommended to make calibration of the sensor by making the Zumo turning around while measuring values. By doing so, it is possible to extract the minima and maxima for each axis. That would allow you to normalize the sensor readings (eg: to return a value between -100 and +100). See the [compass.py](examples/compass.py) example.
 
-## Accelerometer
+## Accelerometer (TO REVIEW)
 
 The reading of the accelerometer according to Pololu can be viewed in the [test_acc.py](examples/test_acc.py) example script. Such data allowed the creation of [test_knock.py](examples/test_knock.py) to detect shocks on the Zumo (just strike it). __However__, take some time to read the second example in this section... the results are more "comprehensive".
 
@@ -499,7 +407,7 @@ Giving shocks on the Zumo (just strike it) on the X & Y axis can be detected on 
 
 The examples here under are ported to MicroPython from the Original Pololu code samples.
 
-## Edge detection
+## Edge detection (TO REVIEW)
 
 The [examples/borderdetect.py](examples/borderdetect.py) example script move the Zumo inside an area bounded with a black line and use the line follower sensor to stay into such area.
 
@@ -511,25 +419,25 @@ Depending on the line information, the zumo motors are controled to run forward,
 
 ## Line Follower
 
-The [examples/line_follower.py](examples/line_follower.py) example script allows the Zumo to follow a black line of 15 to 20mm large (best result for 20mm).
+The [examples/line_follower.py](examples/line_follower.py) script allows the Zumo to follow a black line of 15 to 20mm large over a white background (best result for 20mm).
 
-That examples relies on [QTRsensors](lib/qtrsensors.py) and [ZumoMotor](lib/zumoshield.py) classes.
+That examples relies on [QTRsensors](lib/qtrsensors.py) and [ZumoShield](lib/zumoshield.py) classes.
 
 This link shows up a [YouTube video of the prototype running at the Maker Fair Paris 2019](https://youtu.be/VHN83aYCH8Q) (YouTube)
 
-## Compass
+## Compass (TO REVIEW)
 
 The [examples/compass.py](examples/compass.py) example script lead the zumo to draw squares.
 
 Thank to the LSM303 magnetometer able to detect Earth's magnetic field, the zumo can turn 4 times with an angle of 90 degrees.
 
-## Maze solver
+## Maze solver (TO REVIEW)
 
 ![Maze solvering](docs/_static/maze.jpg)
 
 The [examples/mazesolver.py](examples/mazesolver.py) example script allows the Zumo to solve maze. The script of not bug free but works well.
 
-## Gyroscope
+## Gyroscope (TO REVIEW)
 
 The [examples/gyroscope.py](examples/gyroscope.py) example script do test the gyroscope script.
 
