@@ -263,7 +263,7 @@ print( "Done" )
 ```
 ## Line follower
 
-The line follower placed on the front of the Zumo is used to detect the presence and position of a black or white line under the robot (15mm large line).
+The [line_follower.py](examples/line_follower.py) use the line tracker device placed on the front of the Zumo. It is used to detect the presence and position of a black (or white) line under the zumo robot (15mm large line).
 
 ![line following with Zumo Robot under MicroPython](docs/_static/line-follower.jpg)
 

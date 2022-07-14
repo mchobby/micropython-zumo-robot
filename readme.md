@@ -260,7 +260,7 @@ print( "c est fait" )
 ```
 ## Suiveur de ligne
 
-Le suiveur de ligne présent à l'avant du Zumo permet de détecter la présence d'une ligne noir ou ligne blanche (largeur de 15mm).
+L'exemple [line_follower.py](examples/line_follower.py) utilise le suiveur de ligne présent à l'avant du Zumo. Il permet de détecter la présence d'une ligne noir ou ligne blanche (largeur de 15mm) sous le zumo et de la suivre.
 
 ![Suiveur de ligne (line follower) avec Robot Zumo sous MicroPython](docs/_static/line-follower.jpg)
 
