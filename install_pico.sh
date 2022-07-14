@@ -15,7 +15,7 @@ done
 
 mpremote connect $1 fs cp examples/main.py :main.py
 
-for NAME in line_follower.py test_zumoshield.py test_readline2.py test_play.py test_mag
+for NAME in line_follower.py test_zumoshield.py test_readline2.py test_play.py test_mag.py
 do
 		mpremote connect $1 fs cp examples/$NAME :$NAME
 done

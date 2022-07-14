@@ -17,13 +17,48 @@ In this project the Zumo robot can be programmed with:
 
 All the library and examples made by [Pololu](https://www.pololu.com/) have been ported to  Micropython.
 
+# Configure your Zumo
+For optimal usage of your Zumo Robot with this libraryn we do recommand the following hardware configuration.
+
+## Buzzer
+Place the buzzer jumper to select the 328p option.
+
+## Line follower
+Flip over your Zumo and gently remove the line follower array from its socket.
+
+Place the LED ON jumper on the position labelled 2. Then put back the line follower array in place.
+
+## Battery voltage (optional)
+__<<< PICO implementation only >>>__
+
+If you want to read the battery voltage then solder a pinHeader (2 pins) on the ___A1___ and ___Battery Level___ location.
+
+Next, place the jumper over the the connector.
+
 # Wiring
 
 ## Raspberry-Pi Pico to Zumo adapter
 
+![ROBOT ZUMO under MicroPython with Raspberry-Pi Pico](docs/_static/robotzumo-pico.jpg)
+
 The [Pico-Zumo](https://shop.mchobby.be/product.php?id_product=2430) adapter do allow the usage of the Raspberry-Pi Pico to run the Pololu's Zumo Robot.
 
-![ROBOT ZUMO under MicroPython with Raspberry-Pi Pico](docs/_static/robotzumo-pico.jpg)
+![ROBOT ZUMO](docs/_static/pico-zumo.jpg)
+
+The Pico-Zumo adapter do also offers:
+* Add a Pico Reset button
+* Replication of the Zumo user button
+* A UEXT connector (IDC 10 pins, 2.54mm) with:
+ * 3.3V Power
+ * SPI(0) bus
+ * I2C(0) bus
+ * UART(0)
+ * See the [UEXT product line @ Olimex](https://www.olimex.com/Products/Modules/) or [UEXT product line @ MCHobby](https://shop.mchobby.be/fr/138-uext) .
+* The 5V regulator (optionnal) do sent 5V voltage back to the ZUMO 5V pin
+
+__Ressources:__
+* [Pico-Zumo](https://shop.mchobby.be/product.php?id_product=2430) : Product sheet with lot of useful information.
+* [Adapter schematic](docs/_static/schematic-pico.jpg).
 
 ## Pyboard to Zumo adapter
 
@@ -63,14 +98,17 @@ See the schematic of [Pyboard-to-Zumo](docs/_static/schematic.jpg) or [PYBOARD-U
 
 The required MicroPython libraries must be copied to the MicroPython board before testing the code.
 
-The Pololu Zumo Arduino based libraries have been ported to MicroPython. __The function names and method named have been preserved from C naming convention into the MicroPython implementation__, this will help arduino users to migrate to MicroPython.
+The Pololu Zumo Arduino based libraries have been ported to MicroPython. __The function names and method named are very closed from from C naming convention into the MicroPython implementation__, this will help arduino users to migrate to MicroPython.
 
-* [zumoshield.py](lib/zumoshield.py) : drive the Zumo motors + interface to line followeer, Buzzer, Zumo button, Zumo LED, microcontroler LED and I2C bus.
+* [zumoshield.py](lib/zumoshield.py) : drive the Zumo motors + interface to line followeer, Buzzer, Zumo button, Zumo LED, microcontroler LED and accès au I2C bus.
 * [pushbutton.py](lib/pushbutton.py) : helper functions for buttons.
 * [zumobuzzer.py](lib/zumobuzzer.py) : Zumo buzzer helper.
-* [lsm303.py](lib/lsm303.py) : Helper for the 3 axis accelerometer/magnetometer.
-* [L3G.py](lib/L3G.py) : Helpers for 3 axis gyroscope.
+* [zumoimu.py](lib/zumoimu.py) : Inertial Measurement Unit helper (Gyroscope, Magnetometer, Accelerometer)
 * [qtrsensors.py](lib/qtrsensors.py) : helper for the Pololu's line follower
+
+Following libraries was for Zumo Robot V1.2 and are deprecated now.
+* lsm303.py : Helper for the 3 axis accelerometer/magnetometer.
+* L3G.py : Helpers for 3 axis gyroscope.
 
 # Test
 
@@ -225,7 +263,9 @@ print( "Done" )
 ```
 ## Line follower
 
-The line follower present placed on the front of the Zumo is used to detect the presence and position of a black line or white line (15mm large line).
+The line follower placed on the front of the Zumo is used to detect the presence and position of a black or white line under the robot (15mm large line).
+
+![line following with Zumo Robot under MicroPython](docs/_static/line-follower.jpg)
 
 The following script do activates the Infrared lines of the Line Follower and to make multiple reads of the line position.
 
@@ -254,154 +294,66 @@ while True:
     time.sleep( 1 )
 ```
 
-## Magnetometer reading (TO REVIEW)
+## Inertial Measurement Unit reading
 
-The [test_mag.py](examples/test_mag.py) script (here below) make basic reading on the magnetometer. The code comes from [compass.py](examples/compass.py) (which calculate the orientation and makes the Zumo drawing square).
+The code inside [test_imu.py](examples/test_imy.py), available here below, just made basic reading of IMU unit.
 
 ``` python
-from zumoshield import ZumoShield
-from machine import I2C
-from lsm303 import LSM303,MAGGAIN_2,MAGRATE_100
+ffrom zumoshield import ZumoShield
+from zumoimu import *
 import time
 
-zumo = ZumoShield() # Will stop motors
-i2c = I2C(2)
+# Allow us to have a readable label identifying the IMU
+IMU_TYPE_LSM303DLHC = 1       # LSM303DLHC accelerometer + magnetometer
+IMU_TYPE_LSM303D_L3GD20H = 2  # LSM303D accelerometer + magnetometer, L3GD20H gyro
+IMU_TYPE_LSM6DS33_LIS3MDL = 3 # LSM6DS33 gyro + accelerometer, LIS3MDL magnetometer
 
-lsm = LSM303(i2c)
-lsm.enableDefault()
-lsm.mag_gain = MAGGAIN_2  # Magnetometer gauss with high resolution
-lsm.mag_rate = MAGRATE_100 # magnetometre data rates
+imu_type_as_text = { IMU_TYPE_LSM303DLHC : "LSM303DLHC", IMU_TYPE_LSM303D_L3GD20H : "LSM303D_L3GD20H", IMU_TYPE_LSM6DS33_LIS3MDL : "LSM6DS33_LIS3MDL" }
+
+z = ZumoShield() # Will stop motors
+print( "Zumo I2C scan:", z.i2c.scan() )
+
+imu = ZumoIMU( z.i2c ) # Start with auto detection
+print( "IMU type: %s" % imu_type_as_text[imu.imu_type] )
 
 while True:
-	# read magnetic and accelerometer
-	lsm.read()
-	# Access the mangnetic vector.
-	print( 'x', lsm.m.x, 'y', lsm.m.y )
-	time.sleep( 0.300 )
+	imu.read()
+	print( "Acc= %6i, %6i, %6i  :  Mag= %6i, %6i, %6i  :  Gyro= %6i, %6i, %6i  " % (imu.a.values+imu.m.values+imu.g.values) )
+	time.sleep( 0.5 )
 ```
 
-Which produces the following values:
+Which produce the following content:
 
 ```
-MicroPython v1.16-92-g98c570302-dirty on 2021-07-16; PYBv1.1 with STM32F405RG
+MicroPython v1.18 on 2022-01-17; Raspberry Pi Pico with RP2040
 Type "help()" for more information.
 >>>
->>> import test_mag
-x 16107 y -9128
-x 16099 y -9124
-x 16095 y -9131
-x 16093 y -9148
-x 16086 y -9134
-x 16082 y -9122
-x 16097 y -9145
-x 16087 y -9145
-x 16095 y -9153
-....
-x 13808 y -7192
-x 13804 y -7186
-x 13829 y -7193
-x 13811 y -7187
-x 13788 y -7193
-x 13795 y -7207
-x 13773 y -7193
-x 13807 y -7197
+>>> import test_imu
+Zumo I2C scan: [30, 107]
+IMU type: LSM6DS33_LIS3MDL
+Acc=   -127,    -42,  16583  :  Mag=  -5353,  -4654, -13695  :  Gyro=    183,   -972,   -378  
+Acc=   -125,    -40,  16588  :  Mag=  -5379,  -4655, -13680  :  Gyro=    148,   -959,   -366  
+Acc=   -127,    -37,  16570  :  Mag=  -5372,  -4671, -13680  :  Gyro=    165,   -965,   -373  
+Acc=   -125,    -44,  16583  :  Mag=  -5366,  -4642, -13688  :  Gyro=    174,   -951,   -371  
+Acc=   -113,    -41,  16590  :  Mag=  -5350,  -4678, -13636  :  Gyro=    182,   -962,   -364  
+Acc=   -122,    -25,  16579  :  Mag=  -5371,  -4670, -13613  :  Gyro=    157,   -940,   -364  
+Acc=   -120,    -39,  16559  :  Mag=  -5361,  -4686, -13665  :  Gyro=    166,   -953,   -365  
+Acc=   -113,    -39,  16589  :  Mag=  -5346,  -4644, -13673  :  Gyro=    166,   -948,   -371  
+Acc=    -90,      9,  16574  :  Mag=  -5373,  -4673, -13648  :  Gyro=    235,   -780,   -462  
+Acc=    -55,     14,  16593  :  Mag=  -5405,  -4657, -13618  :  Gyro=    167,   -920,   -341  
+Acc=   4955,  -1384,  21446  :  Mag=  -5759,  -4419, -13937  :  Gyro=  -9584,  -9800,  11313  
+Acc=  -5509,  -1035,  23783  :  Mag=  -4170,  -4768, -12563  :  Gyro=  32766, -11453,  13894  
+Acc=  10218,  12080,   2196  :  Mag=  -8195,  -7845, -11131  :  Gyro= -32766,  27757,  32766  
+Acc=   -834,   -955,  18470  :  Mag=  -5214,  -5658, -13521  :  Gyro= -16310,  -5711,   4933  
+Acc=   -215,     67,  16611  :  Mag=  -5362,  -5564, -13492  :  Gyro=    109,   -984,   -337  
+Acc=   -111,     56,  16576  :  Mag=  -5346,  -5576, -13516  :  Gyro=    190,   -887,   -353  
+Acc=   -122,     55,  16538  :  Mag=  -5331,  -5573, -13477  :  Gyro=    160,   -950,   -372  
 ```
 
-Which corelates the X,Y axis of the Zumo (Z axis is ignored because of the mass of the batteries).
+Some data can be correlated with the X,Y Zumo's axis (the Z axis of the magnetometer can be ignored because of the battries metal).
 
 ![Zumo Axis](docs/_static/zumo-axis.jpg)
 
-__Note:__ you can also read the magnetometer data (in microtesla) via the `magnetic` property. See the [examples/test_mag2.py](examples/test_mag2.py) example.
-
-``` python
-lsm = LSM303(i2c)
-lsm.enableDefault()
-lsm.mag_gain = MAGGAIN_2
-lsm.mag_rate = MAGRATE_100
-
-while True:
-	print( 'x: %f, y: %f, z: %f in MicroTesla' % lsm.magnetic )
-	time.sleep( 0.300 )
-```
-
-__Note:__ due to the range of values, it is recommended to make calibration of the sensor by making the Zumo turning around while measuring values. By doing so, it is possible to extract the minima and maxima for each axis. That would allow you to normalize the sensor readings (eg: to return a value between -100 and +100). See the [compass.py](examples/compass.py) example.
-
-## Accelerometer (TO REVIEW)
-
-The reading of the accelerometer according to Pololu can be viewed in the [test_acc.py](examples/test_acc.py) example script. Such data allowed the creation of [test_knock.py](examples/test_knock.py) to detect shocks on the Zumo (just strike it). __However__, take some time to read the second example in this section... the results are more "comprehensive".
-
-``` python
-from zumoshield import ZumoShield
-from machine import I2C
-from lsm303 import LSM303
-import time
-
-zumo = ZumoShield() # Will stop motors
-i2c = I2C(2)
-lsm = LSM303(i2c)
-lsm.enableDefault()
-
-while True:
-	# read magnetic and accelerometer
-	lsm.read()
-	# Access the accelerometer vector.
-	print( 'x', lsm.a.x, 'y', lsm.a.y )
-	time.sleep( 0.300 )
-```
-
-Which produce the following results:
-
-```
-MicroPython v1.16-92-g98c570302-dirty on 2021-07-16; PYBv1.1 with STM32F405RG
-Type "help()" for more information.
->>>
->>> import test_acc
-x -241 y -23
-x -236 y -16
-x -233 y -68
-x -223 y -81
-x 1110 y -7073 <--- Knocked on the right side
-x -309 y -35
-x -242 y -69
-
-```
-
-The [test_acc2.py](examples/test_acc2.py) example can read the acceleration in m/s^2.
-
-``` python
-from zumoshield import ZumoShield
-from machine import I2C
-from lsm303 import LSM303
-import time
-
-zumo = ZumoShield() # Will stop motors
-i2c = I2C(2)
-
-lsm = LSM303(i2c)
-lsm.enableDefault()
-
-while True:
-	print( 'x: %f, y: %f, z: %f in m/s^2' % lsm.acceleration )
-	time.sleep( 0.300 )
-```
-
-Which produce the following result into the REPL session (with the zumo sitting on a desk).
-
-The value 10 for the Z axis match the earth attraction vector named G (9.81 m/s^2).
-
-```
-MicroPython v1.16-92-g98c570302-dirty on 2021-07-16; PYBv1.1 with STM32F405RG
-Type "help()" for more information.
->>>
->>> import test_acc2
-x: -0.176520, y: -0.039227, z: 10.689249 in m/s^2
-x: -0.176520, y: -0.029420, z: 10.689249 in m/s^2
-x: -0.166713, y: -0.058840, z: 10.699056 in m/s^2
-x: -0.166713, y: -0.039227, z: 10.689249 in m/s^2
-```
-When orientating the Zumo in various position, you cas noticed the influence of earth attraction on the other x or y axis.
-
-Giving shocks on the Zumo (just strike it) on the X & Y axis can be detected on the reading (the value will show peaks in the X & Y axis).
 
 # Pololu's ZUMO example in MicroPython
 
@@ -425,11 +377,20 @@ That examples relies on [QTRsensors](lib/qtrsensors.py) and [ZumoShield](lib/zum
 
 This link shows up a [YouTube video of the prototype running at the Maker Fair Paris 2019](https://youtu.be/VHN83aYCH8Q) (YouTube)
 
-## Compass (TO REVIEW)
+## turn_square - using the mangnetometer / compass / IMU
 
-The [examples/compass.py](examples/compass.py) example script lead the zumo to draw squares.
+The [examples/turn_square.py](examples/turn_square.py) example script lead the zumo to draw squares. It is the equivalant example from [TurnWithCompass.ino](https://github.com/pololu/zumo-shield-arduino-library/blob/master/examples/TurnWithCompass/TurnWithCompass.ino) from Pololu.
 
-Thank to the LSM303 magnetometer able to detect Earth's magnetic field, the zumo can turn 4 times with an angle of 90 degrees.
+![Zumo Turn Square with MicroPython](docs/_static/turn_square.jpg)
+
+Thank to the magnetometer detecting Earth's magnetic field, the zumo can measure its rotation angle and turn with angles of 90 degrees.
+
+This example is very interesting and explains how to:
+* perform the magnetometer calibration in situation.
+* transform raw magnetometer reading into rotational angle (see function `heading_degrees()` )
+* how to average 10 magnetometer measurement to minimize motor magnetic interference (see function `average_heading()` )
+* how to calculate angles difference between two heading_degrees read (see function `relative_heading_degrees()`)
+
 
 ## Maze solver (TO REVIEW)
 
