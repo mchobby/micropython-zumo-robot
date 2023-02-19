@@ -86,8 +86,7 @@ class QTRSensors(object):
 		self._sensorPins = pins
 		self._sensorCount = len( pins )
 
-		self._timeout = timeout # only used for RC sensors
-		self._maxValue = timeout # the maximum value returned by readPrivate()
+		self._maxValue = timeout # the maximum value returned by readPrivate() AKA the timeout
 		# self._samplesPerSensor = 4 # only used for analog sensors
 		self.calibrationOn = CalibrationData()
 		self.calibrationOff = CalibrationData()
@@ -278,11 +277,11 @@ class QTRSensors(object):
 	@property
 	def timeout( self ):
 		# recommanded value between 1000 & 3000 uSec
-		return self._timeout
+		return self._maxValue
 	@timeout.setter
 	def timeout( self, value ):
 		assert 0<=value<=5000
-		self._timeout = value
+		self._maxValue = value
 
 
 	@property
