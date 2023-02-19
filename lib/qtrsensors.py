@@ -68,6 +68,17 @@ class CalibrationData:
 		self.minimum = None
 		self.maximum = None
 
+	def as_json( self ):
+		import json
+		_dict = {'initialized' : self.initialized, 'minimum' : self.minimum, 'maximum' : self.maximum }
+		return json.dumps( _dict )
+
+	def load_json( self, _str ):
+		import json
+		_dict = json.loads(_str)
+		self.initialized = _dict['initialized']
+		self.minimum = _dict['minimum']
+		self.maximum = _dict['maximum']
 
 class QTRSensors(object):
 	def __init__(self,pins,emitterPin, evenEmitterPin=None, timeout=DEFAULT_TIMEOUT):
@@ -185,16 +196,23 @@ class QTRSensors(object):
 			self._sensorPins[i].init( Pin.IN )
 
 		# interrupts() # re-enable
-		_time = time.ticks_diff( time.ticks_us(), startTime )
-		while _time < self._maxValue:
+		_delta = 0
+		_diff = time.ticks_diff( time.ticks_us(), startTime ) + _delta
+		while _diff < self._maxValue:
 			# disable interrupts so we can read all the pins as close to the same
 			# time as possible
 			#noInterrupts()
 			for i in range( start, self._sensorCount, step ): # (uint8_t i = start; i < _sensorCount; i += step)
-				if (self._sensorPins[i].value() == 0) and (_time < sensorValues[i]):
+				if (self._sensorPins[i].value() == 0) and (_diff < sensorValues[i]):
 					# record the first time the line reads low
-					sensorValues[i] = _time
-			_time = time.ticks_diff( time.ticks_us(), startTime )
+					sensorValues[i] = _diff
+			_new_diff = time.ticks_diff( time.ticks_us(), startTime )
+			if _new_diff < 0: # we got over the maximum value and restart counting from 0.
+				_delta = _diff # Remember what we have counted until now
+				startTime = 0 # start new diff calcultation from 0
+				_diff = time.ticks_diff( time.ticks_us(), startTime ) + _delta
+			else:
+				_diff = _new_diff + _delta
 		# interrupts() # re-enable
 
 	def __readLinePrivate( self, sensorValues, mode, invertReadings): # returns uint16_t, uint16_t * sensorValues, QTRReadMode mode, bool invertReadings

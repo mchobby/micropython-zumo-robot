@@ -179,15 +179,17 @@ class ZumoShield():
 	def ir_calibration( self ):
 		""" Place the Zumo over a line before running this, it will control
 		   the motor to calibrate the IR sensors """
-		for i in range(80):
-			if(((i>10) and (i<=30)) or ((i>50) and (i <= 70))):  #entre 10 et 30 il tourne dans un sens entre 50 et 70 il tourne dans l'autre sens
-				self.motors.setSpeeds(-100,100)
-			else:
-				self.motors.setSpeeds(100,-100)
+		try:
+			for i in range(80):
+				if(((i>10) and (i<=30)) or ((i>50) and (i <= 70))):  #entre 10 et 30 il tourne dans un sens entre 50 et 70 il tourne dans l'autre sens
+					self.motors.setSpeeds(-100,100)
+				else:
+					self.motors.setSpeeds(100,-100)
 
-			self.ir.calibrate()
-			time.sleep(0.02)
-		self.motors.stop()
+				self.ir.calibrate()
+				time.sleep(0.02)
+		finally:
+			self.motors.stop()
 
 	def play_2tones( self ):
 		self.buzzer.play(">g8>>c8")
