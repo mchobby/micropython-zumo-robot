@@ -188,15 +188,13 @@ class QTRSensors(object):
 		# record start time before the first sensor is switched to input
 		# (similarly, time is checked before the first sensor is read in the loop below)
 		startTime = time.ticks_us()
-		_time = 0
 
 		for i in range( start, self._sensorCount, step ): # (uint8_t i = start; i < _sensorCount; i += step)
 			#make sensor line an input (should also ensure pull-up is disabled)
 			self._sensorPins[i].init( Pin.IN )
 
 		# interrupts() # re-enable
-		_delta = 0
-		_diff = time.ticks_diff( time.ticks_us(), startTime ) + _delta
+		_diff = time.ticks_diff( time.ticks_us(), startTime )
 		while _diff < self._maxValue:
 			# disable interrupts so we can read all the pins as close to the same
 			# time as possible
@@ -205,13 +203,8 @@ class QTRSensors(object):
 				if (self._sensorPins[i].value() == 0) and (_diff < sensorValues[i]):
 					# record the first time the line reads low
 					sensorValues[i] = _diff
-			_new_diff = time.ticks_diff( time.ticks_us(), startTime )
-			if _new_diff < 0: # we got over the maximum value and restart counting from 0.
-				_delta = _diff # Remember what we have counted until now
-				startTime = 0 # start new diff calcultation from 0
-				_diff = time.ticks_diff( time.ticks_us(), startTime ) + _delta
-			else:
-				_diff = _new_diff + _delta
+			_diff = time.ticks_diff( time.ticks_us(), startTime )
+
 		# interrupts() # re-enable
 
 	def __readLinePrivate( self, sensorValues, mode, invertReadings): # returns uint16_t, uint16_t * sensorValues, QTRReadMode mode, bool invertReadings
@@ -365,9 +358,11 @@ class QTRSensors(object):
 			if self._dimmable:
 				# Make sure it's been at least 300 us since the emitter pin was first set
 				# high before returning. (Driver min is 250 us.) Some time might have
-				# already passed while we set the dimming level.
-				while time.ticks_diff( time.ticks_us(), emittersOnStart) < 300 :
+				# already passed while we set the dimming level
+				_diff = time.ticks_diff( time.ticks_us(), emittersOnStart)
+				while _diff < 300 :
 					time.sleep_us(10)
+					_diff = time.ticks_diff( time.ticks_us(), emittersOnStart)
 			else: # not dimmable
 				time.delay_us(200)
 
