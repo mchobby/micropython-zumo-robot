@@ -39,6 +39,7 @@ __repo__ = "https://github.com/mchobby/pyboard-driver.git"
 # Identify the plateform
 import os
 is_pico = os.uname().sysname=='rp2' # Otherwise, it is Pypboad
+is_pico_w = is_pico and ( 'Pico W' in os.uname().machine )
 
 
 from machine import Pin, I2C
@@ -201,7 +202,10 @@ class ZumoShield():
 	def mcu_led( self ):
 		""" Microcontroler onboard LED """
 		if is_pico:
-			return Pin( 25, Pin.OUT )
+			if is_pico_w:
+				return Pin( 'LED' )
+			else:
+				return Pin( 25, Pin.OUT )
 		else:
 			from pyb import LED
 			return LED(1)
