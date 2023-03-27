@@ -10,6 +10,8 @@ See example line_follower.py in the project source
 History:
   21 jul 2021 - Braccio M. - Initial writing
   20 jul 2022 - Meurisse D. - Complete rewriting
+  14 mar 2023 - Meurisse D. - Optimisation to avoids sensorValues argument (so memory fragmentation)
+                              Append property values
 """
 #
 # The MIT License (MIT)
@@ -34,12 +36,13 @@ History:
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__version__ = "0.0.3"
-__repo__ = "https://github.com/mchobby/pyboard-driver.git"
+__version__ = "0.0.4"
+__repo__ = "https://github.com/mchobby/micropython-zumo-robot.git"
 
 from micropython import const
 from machine import Pin
 import time
+import gc
 
 # QTRReadMode
 # https://github.com/pololu/qtr-sensors-arduino/blob/master/QTRSensors.h
@@ -85,6 +88,9 @@ class QTRSensors(object):
 		assert len(pins) < MAX_SENSOR
 		self._sensorPins = pins
 		self._sensorCount = len( pins )
+		self.__sensorValues = [0]*len( pins )
+		self.__maxSensorValues = [0]*len( pins )
+		self.__minSensorValues = [0]*len( pins )
 
 		self._maxValue = timeout # the maximum value returned by readPrivate() AKA the timeout
 		# self._samplesPerSensor = 4 # only used for analog sensors
@@ -93,7 +99,7 @@ class QTRSensors(object):
 
 		self._oddEmitterPin = emitterPin # also used for single emitter pin
 		self._evenEmitterPin = evenEmitterPin
-		self._emitterPinCount = 1 + 1 if evenEmitterPin != None else 0 # at least one
+		self._emitterPinCount = 1 + (1 if evenEmitterPin != None else 0) # at least one
 		self._oddEmitterPin.init( Pin.OUT )
 		if self._evenEmitterPin != None:
 			self._evenEmitterPin.init( Pin.OUT )
@@ -103,6 +109,9 @@ class QTRSensors(object):
 
 		self._lastPosition = 0
 
+	@property
+	def values( self ):
+		return self.__sensorValues
 
 	def __emittersOnWithPin( self, pin ): #pin:uint8_t return:uint16_t
 		if self._dimmable and (pin.value() == 1) :
@@ -127,15 +136,22 @@ class QTRSensors(object):
 
 		return emittersOnStart
 
-	def __calibrateOnOrOff( self, calibration, mode ): # CalibrationData & calibration, QTRReadMode mode):
+	def __calibrateOnOrOff( self, calOn, mode ): # CalibrationData & calibration, QTRReadMode mode):
 		# Handles the actual calibration, including (re)allocating and
 		# initializing the storage for the calibration values if necessary.
-		sensorValues = [0]*self._sensorCount
-		maxSensorValues = [0]*self._sensorCount
-		minSensorValues = [0]*self._sensorCount
+		#DEBUG print("calibrateOnOrOff.in")
+		for i in range( self._sensorCount ):
+			self.__sensorValues[i] = 0
+			self.__maxSensorValues[i] = 0
+			self.__minSensorValues[i] = 0
+		if calOn: # If we do calibrateOn
+			calibration = self.calibrationOn
+		else:
+			calibration = self.calibrationOff
 
 		# (Re)allocate and initialize the arrays if necessary.
 		if not calibration.initialized:
+			#DEBUG print("calibrateOnOrOff.calibration-init")
 			# Looks not used! oldMaximum = list( calibration.maximum ) # Make a copy
 			calibration.maximum = [0]*self._sensorCount
 
@@ -143,30 +159,33 @@ class QTRSensors(object):
 			calibration.minimum = [self._maxValue]*self._sensorCount
 			calibration.initialized = True
 
-
+		#DEBUG print("calibrateOnOrOff.10*read")
 		for j in range( 10 ): # (uint8_t j = 0; j < 10; j++)
-			self.read(sensorValues, mode)
+			# self.read( sensorValues, mode)# DEBUG NOK
+			self.read( mode ) # DEBUG_NOK
 			for i in range( self._sensorCount ): # (uint8_t i = 0; i < _sensorCount; i++)
 				# set the max we found THIS time
-				if (j == 0) or (sensorValues[i] > maxSensorValues[i]) :
-					maxSensorValues[i] = sensorValues[i]
+				if (j == 0) or (self.__sensorValues[i] > self.__maxSensorValues[i]) :
+					self.__maxSensorValues[i] = self.__sensorValues[i]
 				# set the min we found THIS time
-				if (j == 0) or (sensorValues[i] < minSensorValues[i]) :
-					minSensorValues[i] = sensorValues[i]
-
+				if (j == 0) or (self.__sensorValues[i] < self.__minSensorValues[i]) :
+					self.__minSensorValues[i] = self.__sensorValues[i]
+		#DEBUG print("calibrateOnOrOff.record-min-max")
 		# record the min and max calibration values
 		for i in range( self._sensorCount ):
 			# Update maximum only if the min of 10 readings was still higher than it
 			# (we got 10 readings in a row higher than the existing maximum).
-			if minSensorValues[i] > calibration.maximum[i]:
-				calibration.maximum[i] = minSensorValues[i]
+			if self.__minSensorValues[i] > calibration.maximum[i]:
+				calibration.maximum[i] = self.__minSensorValues[i]
 
 			# Update minimum only if the max of 10 readings was still lower than it
 			# (we got 10 readings in a row lower than the existing minimum).
-			if maxSensorValues[i] < calibration.minimum[i]:
-				calibration.minimum[i] = maxSensorValues[i]
+			if self.__maxSensorValues[i] < calibration.minimum[i]:
+				calibration.minimum[i] = self.__maxSensorValues[i]
+		gc.collect()
+		#DEBUG print("calibrateOnOrOff.Collect+Out")
 
-	def __readPrivate( self, sensorValues, start = 0, step = 1): # uint16_t * sensorValues, uint8_t start = 0, uint8_t step = 1
+	def __readPrivate( self, start = 0, step = 1): # uint16_t * sensorValues, uint8_t start = 0, uint8_t step = 1
 		# ONLY SUPPORTS the RC sensor (not analog ones)
 		# Reads the first of every [step] sensors, starting with [start] (0-indexed, so start = 0 means start with the first sensor).
 		# For example, step = 2, start = 1 means read the *even-numbered* sensors. start defaults to 0, step defaults to 1
@@ -174,7 +193,7 @@ class QTRSensors(object):
 			return
 
 		for i in range( start, self._sensorCount, step ): #(uint8_t i = start; i < _sensorCount; i += step)
-			sensorValues[i] = self._maxValue
+			self.__sensorValues[i] = self._maxValue
 			# make sensor line an output (drives low briefly, but doesn't matter)
 			self._sensorPins[i].init( Pin.OUT )
 			# drive sensor line high
@@ -200,14 +219,14 @@ class QTRSensors(object):
 			# time as possible
 			#noInterrupts()
 			for i in range( start, self._sensorCount, step ): # (uint8_t i = start; i < _sensorCount; i += step)
-				if (self._sensorPins[i].value() == 0) and (_diff < sensorValues[i]):
+				if (self._sensorPins[i].value() == 0) and (_diff < self.__sensorValues[i]):
 					# record the first time the line reads low
-					sensorValues[i] = _diff
+					self.__sensorValues[i] = _diff
 			_diff = time.ticks_diff( time.ticks_us(), startTime )
 
 		# interrupts() # re-enable
 
-	def __readLinePrivate( self, sensorValues, mode, invertReadings): # returns uint16_t, uint16_t * sensorValues, QTRReadMode mode, bool invertReadings
+	def __readLinePrivate( self, mode, invertReadings): # returns uint16_t, uint16_t * sensorValues, QTRReadMode mode, bool invertReadings
 		onLine = False # Sensor is on the line
 		avg = 0 # this is for the weighted total
 		sum = 0 # this is for the denominator, which is <= 64000
@@ -216,10 +235,10 @@ class QTRSensors(object):
 		if mode == READMODE_MANUAL:
 			return 0
 
-		self.readCalibrated( sensorValues, mode )
+		self.readCalibrated( mode )
 
 		for i in range( self._sensorCount ): # (uint8_t i = 0; i < _sensorCount; i++)
-			value = sensorValues[i]
+			value = self.__sensorValues[i]
 			if invertReadings:
 				value = 1000 - value
 
@@ -327,8 +346,10 @@ class QTRSensors(object):
 
 	def emittersOn( self, emitters=EMITTERS_ALL, wait=True ):
 		assert emitters in (EMITTERS_ALL,EMITTERS_ODD,EMITTERS_EVEN)
+		assert self._emitterPinCount > 0
 		pinChanged = False
 		emittersOnStart = 0 # uint16_t ;
+		#DEBUG print( 'eOn.enter' )
 
 		# Use odd emitter pin in these cases:
 		# - 1 emitter pin, emitters = all
@@ -355,6 +376,8 @@ class QTRSensors(object):
 				pinChanged = True
 
 		if wait and pinChanged:
+			if (emittersOnStart==0) or (emittersOnStart==None): # Debug testing
+				emittersOnStart = time.ticks_us()
 			if self._dimmable:
 				# Make sure it's been at least 300 us since the emitter pin was first set
 				# high before returning. (Driver min is 250 us.) Some time might have
@@ -365,6 +388,8 @@ class QTRSensors(object):
 					_diff = time.ticks_diff( time.ticks_us(), emittersOnStart)
 			else: # not dimmable
 				time.delay_us(200)
+		#DEBUG print( 'eOn.exit' )
+
 
 	def emittersSelect( self, emitters ):
 		""" Turn on selected emitters and turns off the other """
@@ -409,12 +434,12 @@ class QTRSensors(object):
 			return
 
 		if mode in (READMODE_ON, READMODE_ON_AND_OFF ):
-			self.__calibrateOnOrOff( self.calibrationOn, READMODE_ON )
+			self.__calibrateOnOrOff( True, READMODE_ON )
 		elif mode in (READMODE_ODD_EVEN, READMODE_ODD_EVEN_AND_OFF):
-			self.__calibrateOnOrOff( self.calibrationOn, READMODE_ODD_EVEN )
+			self.__calibrateOnOrOff( True, READMODE_ODD_EVEN )
 
 		if mode in (READMODE_ON_AND_OFF, READMODE_ODD_EVEN_AND_OFF, READMODE_OFF):
-			self.__calibrateOnOrOff( self.calibrationOff, READMODE_OFF)
+			self.__calibrateOnOrOff( False, READMODE_OFF)
 
 
 	def resetCalibration( self ):
@@ -429,28 +454,31 @@ class QTRSensors(object):
 				self.calibrationOff.minimum[i] = self._maxValue
 
 
-	def read( self, sensorValues, mode=READMODE_ON ):
+	def read( self, mode=READMODE_ON ):
 		assert mode in (READMODE_OFF, READMODE_ON, READMODE_ON_AND_OFF, READMODE_ODD_EVEN, READMODE_ODD_EVEN_AND_OFF, READMODE_MANUAL )
+		sensorValues = self.__sensorValues
 		if mode==READMODE_OFF:
 			self.emittersOff()
-			self.__readPrivate( sensorValues )
+			self.__readPrivate(  )
 			return
 		elif mode==READMODE_MANUAL:
-			self.__readPrivate( sensorValues )
+			self.__readPrivate(  )
 			return
 		elif mode in ( READMODE_ON, READMODE_ON_AND_OFF ):
 			self.emittersOn();
-			self.__readPrivate( sensorValues )
-			self.emittersOff()
+			#DEBUG print( '__readPrivate.enter' )
+			self.__readPrivate() # DEBUG NOK
+			#DEBUG print( '__readPrivate.exit' )
+			self.emittersOff() # DEBUG NOK
 		elif mode in ( READMODE_ODD_EVEN , READMODE_ODD_EVEN_AND_OFF ):
 			# Turn on odd emitters and read the odd-numbered sensors.
 			# (readPrivate takes a 0-based array index, so start = 0 to start with the first sensor)
 			self.emittersSelect(READMODE_ODD)
-			self.__readPrivate(sensorValues, 0, 2)
+			self.__readPrivate( 0, 2)
 			# Turn on even emitters and read the even-numbered sensors.
 			# (readPrivate takes a 0-based array index, so start = 1 to start with  the second sensor)
 			self.emittersSelect(READMODE_EVEN)
-			self.__readPrivate(sensorValues, 1, 2)
+			self.__readPrivate( 1, 2)
 			self.emittersOff()
 		else:
 			# invalid - do nothing
@@ -468,8 +496,10 @@ class QTRSensors(object):
 					sensorValues[i] = self._maxValue
 
 
-	def readCalibrated( self, sensorValues, mode=READMODE_ON ):
+	def readCalibrated( self, mode=READMODE_ON ):
 		assert mode in (READMODE_OFF, READMODE_ON, READMODE_ON_AND_OFF, READMODE_ODD_EVEN, READMODE_ODD_EVEN_AND_OFF, READMODE_MANUAL )
+		#DEBUG print( "readCalibrated.in" )
+		sensorValues = self.__sensorValues
 		# manual emitter control is not supported
 		if mode == READMODE_MANUAL:
 			return
@@ -484,7 +514,7 @@ class QTRSensors(object):
 				return
 
 		# read the needed values
-		self.read( sensorValues, mode )
+		self.read( mode )
 
 		for i in range( self._sensorCount ):
 			calmin = self._maxValue
@@ -523,17 +553,19 @@ class QTRSensors(object):
 				value = 1000
 
 			sensorValues[i] = value
+		gc.collect()
+		#DEBUG print( "readCalibrated.out" )
 
 
-	def readLineBlack( self, sensorValues, mode=READMODE_ON ):
+	def readLineBlack( self, mode=READMODE_ON ):
 		""" Reads the sensors, provides calibrated values, and returns an
 			estimated black line position. """
-		return self.__readLinePrivate( sensorValues, mode, False )
+		return self.__readLinePrivate( mode, False )
 
-	def readLineWhite( self, sensorValues, mode=READMODE_ON ):
+	def readLineWhite( self, mode=READMODE_ON ):
 		""" Reads the sensors, provides calibrated values, and returns an
 			estimated white line position. """
-		self.__readLinePrivate( sensorValues, mode, True )
+		self.__readLinePrivate( mode, True )
 
 class QTRSensorsAnalog(object):
     """this class isn't used in this projet. The original arduino library can be found on: https://github.com/pololu/qtr-sensors-arduino/releases"""

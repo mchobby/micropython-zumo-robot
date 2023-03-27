@@ -2,7 +2,7 @@
 
     J9 MUST BE CLOSED ON THE ZUMO BOARD to get voltage battery
 
-See project source @ https://github.com/mchobby/pyboard-driver/tree/master/zumo-robot
+See project source @ https://github.com/mchobby/micropython-zumo-robot
 
 18 may 2022 - domeu - initial writing
 """

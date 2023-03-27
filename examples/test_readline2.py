@@ -34,13 +34,12 @@ z.button.waitForButton()
 #
 last = time.time()
 while True:
-	sensors = [0 for i in range(6)]
 	# With the Zumo blade going forward
 	#   Value from 500 to 4500 : line is placed from left to right
 	#   value 2500 : line centered on the zumo
 	#   value 0 : line exceed on the left
 	#   value 5000 : line exceed on the right
-	position = z.ir.readLineBlack( sensors )
+	position = z.ir.readLineBlack( )
 	if (time.time() - last) > 1:
 		print( 'Line position: %5i  - Sensors: %s' % (position, sensors) )
 		last = time.time()

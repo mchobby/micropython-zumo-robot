@@ -28,50 +28,52 @@ REQUIRES library qtrsensors.py in the project source
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN
 from zumoshield import ZumoShield
-import time
+from machine import WDT
+from micropython import mem_info
+import time, gc
 
 z = ZumoShield()
-#reflectanceSensors.calibrate()
 
 MAX_SPEED = 100
-lastError=0
-compteur = 0
+last_error = 0
+count = 0
+
+def clamp( val, _min, _max ):
+    return max(min(_max, val), _min)
 
 print( "Press Button to start calibration" )
 z.buzzer.play(">g8>>c8")
 z.button.waitForButton()
-time.sleep(1)
-for i in range(80):
-    if(((i>10) and (i<=30)) or ((i>50) and (i <= 70))):  #entre 10 et 30 il tourne dans un sens entre 50 et 70 il tourne dans l'autre sens
-        z.motors.setSpeeds(-100,100)
-    else:
-        z.motors.setSpeeds(100,-100)
+# time.sleep(1)
+# z.ir_calibration( motors=True )
+# z.buzzer.play(">g8>>c8")
 
-    z.ir.calibrate()
-    time.sleep(0.02)
+# Reload calibration data
+z.ir.calibrationOn.load_json( '{"maximum": [2000, 1775, 1475, 1172, 1500, 2000], "minimum": [303, 303, 303, 303, 303, 304], "initialized": true}' )
+z.ir.calibrationOff.load_json( '{"maximum": null, "minimum": null, "initialized": false}' )
 
-z.motors.setSpeeds(0,0)
-z.buzzer.play(">g8>>c8")
-while(True):
-    sensors = [0 for i in range(6)]
-    position = z.ir.readLineBlack(sensors)
-    error = position -2500
-    speedDifference = (error/4) + (6*(error-lastError))
-    lastError = error
-    m1Speed=MAX_SPEED+speedDifference
-    m2Speed=MAX_SPEED-speedDifference
-    if(m1Speed<0):
-        m1Speed=0
-    if(m2Speed<0):
-        m2Speed=0
-    if(m1Speed>MAX_SPEED):
-        m1Speed=MAX_SPEED
-    if(m2Speed>MAX_SPEED):
-        m2Speed=MAX_SPEED
-    z.motors.setSpeeds(m1Speed,m2Speed)
-    compteur = compteur+1
-    if (compteur==10):
-        print("line follower")
-        print(sensors)
-        print(position)
-        compteur = 0
+
+try:
+	wdt = WDT( timeout = 300 ) # 300ms before reset
+	while(True):
+	    wdt.feed()
+	    position = z.ir.readLineBlack()
+
+	    error = position -2500
+	    speed_diff = (error/4) + (6*(error-last_error))
+	    last_error = error
+
+	    m1Speed = MAX_SPEED+speed_diff
+	    m2Speed = MAX_SPEED-speed_diff
+	    m1Speed = clamp( m1Speed, 0, MAX_SPEED )
+	    m2Speed = clamp( m2Speed, 0, MAX_SPEED )
+
+	    z.motors.setSpeeds(m1Speed,m2Speed)
+
+	    #count += 1
+	    if count%10 == 0 :
+	        print("%i : position %i" % (count,position) )
+	        print( mem_info() )
+        gc.collect()
+finally:
+	z.motors.stop()

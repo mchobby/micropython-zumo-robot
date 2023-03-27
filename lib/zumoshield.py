@@ -33,8 +33,8 @@ See example line_follower.py in the project source
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__version__ = "0.0.3"
-__repo__ = "https://github.com/mchobby/pyboard-driver.git"
+__version__ = "0.0.4"
+__repo__ = "https://github.com/mchobby/micropython-zumo-robot.git"
 
 # Identify the plateform
 import os
@@ -176,15 +176,16 @@ class ZumoShield():
 		self.buzzer = PololuBuzzer()
 		self.__i2c = None
 
-	def ir_calibration( self ):
+	def ir_calibration( self, motors=True  ):
 		""" Place the Zumo over a line before running this, it will control
 		   the motor to calibrate the IR sensors """
 		try:
 			for i in range(80):
-				if(((i>10) and (i<=30)) or ((i>50) and (i <= 70))):  #entre 10 et 30 il tourne dans un sens entre 50 et 70 il tourne dans l'autre sens
-					self.motors.setSpeeds(-100,100)
-				else:
-					self.motors.setSpeeds(100,-100)
+				if motors:
+					if(((i>10) and (i<=30)) or ((i>50) and (i <= 70))):  #entre 10 et 30 il tourne dans un sens entre 50 et 70 il tourne dans l'autre sens
+						self.motors.setSpeeds(-100,100)
+					else:
+						self.motors.setSpeeds(100,-100)
 
 				self.ir.calibrate()
 				time.sleep(0.02)

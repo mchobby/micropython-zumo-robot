@@ -13,7 +13,6 @@ print("Move the Zumo over the line while calibrating (in 10 steps).")
 print("  This will helps to identifies the white/black contrast.")
 #
 for i in range(10):
-	print( "Calibrate %i / 10" % (i+1) )
 	zumo.ir.calibrate()
 	time.sleep(0.5)
 
@@ -23,12 +22,11 @@ print("")
 print("Read the line position")
 print("")
 while True:
-	sensors = [0 for i in range(6)]
 	# With the Zumo blade going forward
 	#   Value from 500 to 4500 : line is placed from left to right
 	#   value 2500 : line centered on the zumo
 	#   value 0 : line exceed on the left
 	#   value 5000 : line exceed on the right
-	position = zumo.ir.readLineBlack( sensors )
+	position = zumo.ir.readLineBlack()
 	print( 'Line position: ', position )
 	time.sleep( 1 )

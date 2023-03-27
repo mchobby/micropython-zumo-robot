@@ -1,9 +1,10 @@
-""" test_calibrate.py - perform a calibration process and return data as json string.
+""" test_calibrate.py - perform the Line Sensor calibration process and return data as json string.
                         this allow to reload the calibration data without running a calibration process.
 
-See project source @ https://github.com/mchobby/pyboard-driver/tree/master/zumo-robot
+See project source @ https://github.com/mchobby/micropython-zumo-robot
 
 19 feb 2022 - domeu - initial writing
+15 mar 2023 - domeu - support for motors=False
 """
 
 from zumoshield import *
@@ -13,8 +14,10 @@ print( "Press user button to start calibration." )
 z.play_blip()
 z.button.waitForButton()
 
- z.ir_calibration()
+# Control the motor while calibrating the Zumo over a line.
+z.ir_calibration( motors=True )
 z.play_blip()
+print( "Calibration finished" )
 
 # Getting calibration data as string
 json_on = z.ir.calibrationOn.as_json()

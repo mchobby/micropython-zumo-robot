@@ -4,7 +4,7 @@ test_zumoshield.py - Test the basic features of the shield.
 * Author(s):  Meurisse D. from MCHobby (shop.mchobby.be).
 
 See project source @ https://github.com/mchobby/micropython-zumo-robot
-REQUIRES library zumoshield.py in the project source
+REQUIRES library zumoshield.py in the project source 
 """
 
 from zumoshield import ZumoShield
