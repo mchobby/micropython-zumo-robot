@@ -19,18 +19,13 @@ REQUIRES library zumoshield.py in the project source
 # the REPL session as numbers from 0 (maximum reflectance) to 2500 (minimum
 # reflectance; this is the default RC timeout, which can be changed with setTimeout()).
 
-from qtrsensors import QTRSensors
-from machine import Pin
+from zumoshield import *
 import time
 
-pin_numbers = (14,17,10,19,18,13)
-pin_emitter = Pin( 16, Pin.OUT )
-sv = [0]*len(pin_numbers) # sensor values
-
-qtr = QTRSensors( [Pin(nr,Pin.OUT) for nr in pin_numbers], pin_emitter )
-pin_emitter.value( 1 ) # Activate emitters
+z = ZumoShield()
+z.ir.emittersOn()
 
 while True:
-	qtr.read( sv )
-	print( '%4i  %4i  %4i  %4i  %4i  %4i ' % (sv[0],sv[1],sv[2],sv[3],sv[4],sv[5]) )
+	z.ir.read()
+	print( '%4i  %4i  %4i  %4i  %4i  %4i ' % (z.ir.values[0],z.ir.values[1],z.ir.values[2],z.ir.values[3],z.ir.values[4],z.ir.values[5]) )
 	time.sleep_ms(250)

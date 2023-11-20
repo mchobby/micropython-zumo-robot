@@ -1,7 +1,8 @@
-""" RFM69 TEST : RECEIVER node
+""" RFM69 RC Zumo : RECEIVER - read messages sends by rfm_rc_joy.py
+    This script is designed for debugging purpose
 
-Receives message and send back ACK over RFM69HCW SPI module - RECEIVER node
-Must be tested togheter with rfmtest_tx.py setup
+Receives message over RFM69HCW SPI module - RC RECEIVER node
+Must be tested togheter with rfm_rc_joy.py
 
 See GitHub : https://github.com/mchobby/micropython-zumo-robot/tree/main/extras/RFM69
 

@@ -29,14 +29,12 @@ REQUIRES library qtrsensors.py in the project source
 # OUT OF OR IN
 from zumoshield import ZumoShield
 from machine import WDT
-from micropython import mem_info
-import time, gc
+import time
 
 z = ZumoShield()
 
 MAX_SPEED = 100
 last_error = 0
-count = 0
 
 def clamp( val, _min, _max ):
     return max(min(_max, val), _min)
@@ -44,17 +42,16 @@ def clamp( val, _min, _max ):
 print( "Press Button to start calibration" )
 z.buzzer.play(">g8>>c8")
 z.button.waitForButton()
-# time.sleep(1)
-# z.ir_calibration( motors=True )
-# z.buzzer.play(">g8>>c8")
+time.sleep(1)
+z.ir_calibration( motors=True )
+z.buzzer.play(">g8>>c8")
 
 # Reload calibration data
-z.ir.calibrationOn.load_json( '{"maximum": [2000, 1775, 1475, 1172, 1500, 2000], "minimum": [303, 303, 303, 303, 303, 304], "initialized": true}' )
-z.ir.calibrationOff.load_json( '{"maximum": null, "minimum": null, "initialized": false}' )
-
+# z.ir.calibrationOn.load_json( '{"maximum": [2000, 1775, 1475, 1172, 1500, 2000], "minimum": [303, 303, 303, 303, 303, 304], "initialized": true}' )
+# z.ir.calibrationOff.load_json( '{"maximum": null, "minimum": null, "initialized": false}' )
 
 try:
-	wdt = WDT( timeout = 300 ) # 300ms before reset
+	wdt = WDT( timeout = 500 ) # 300ms before reset
 	while(True):
 	    wdt.feed()
 	    position = z.ir.readLineBlack()
@@ -69,11 +66,5 @@ try:
 	    m2Speed = clamp( m2Speed, 0, MAX_SPEED )
 
 	    z.motors.setSpeeds(m1Speed,m2Speed)
-
-	    #count += 1
-	    if count%10 == 0 :
-	        print("%i : position %i" % (count,position) )
-	        print( mem_info() )
-        gc.collect()
 finally:
 	z.motors.stop()

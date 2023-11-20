@@ -33,7 +33,7 @@ See project source @ https://github.com/mchobby/micropython-zumo-robot
 # THE SOFTWARE.
 
 __version__ = "0.0.3"
-__repo__ = "https://github.com/mchobby/pyboard-driver.git"
+__repo__ = "https://github.com/mchobby/micropython-zumo-robot.git"
 
 # Identify the plateform
 import os

@@ -9,6 +9,9 @@ See project source @ https://github.com/mchobby/micropython-zumo-robot
 15 june 2022 - domeu - initial portage from ZumoIMU.cpp
 """
 
+__version__ = "0.0.2"
+__repo__ = "https://github.com/mchobby/micropython-zumo-robot.git"
+
 from micropython import const
 import struct
 import math
@@ -389,7 +392,7 @@ class Compass( object ):
 
 			time.sleep_ms(50)
 
-	def averageHeading( self ):
+	def average_heading( self ):
 		self._avg.set( 0,0,0 )
 		for x in range(10):
 			self._imu.read_mag()
@@ -401,7 +404,8 @@ class Compass( object ):
 
 		return self.heading() # angle in degree
 
-	def relativeHeading( self, heading_from, heading_to):
+	def relative_heading( self, heading_from, heading_to):
+		# Relative Heading angle in degrées
 		relative_heading=float(heading_to) - float(heading_from)
 		if relative_heading > 180:
 			relative_heading -=	360

@@ -35,7 +35,8 @@ See project source @ https://github.com/mchobby/micropython-zumo-robot
 
 
 __version__ = "0.0.4"
-__repo__ = "https://github.com/mchobby/pyboard-driver.git"
+__repo__ = "https://github.com/mchobby/micropython-zumo-robot.git"
+
 
 #from pyb import Timer, Pin
 from machine import Pin

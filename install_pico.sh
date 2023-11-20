@@ -2,7 +2,7 @@
 # Install the files on a pico
 if [ -z "$1" ]
   then
-    echo "/dev/ttyACMx device missing!"
+    echo "/dev/ttyACMx parameter missing!"
 		exit 0
 fi
 
@@ -15,7 +15,7 @@ done
 
 mpremote connect $1 fs cp examples/main.py :main.py
 
-for NAME in line_follower.py test_zumoshield.py test_readline2.py test_play.py test_mag.py
+for NAME in line_follower.py test_zumoshield.py test_readline2.py test_play.py test_compass.py
 do
 		mpremote connect $1 fs cp examples/$NAME :$NAME
 done

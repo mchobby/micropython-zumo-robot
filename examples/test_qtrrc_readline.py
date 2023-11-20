@@ -68,6 +68,7 @@ print("")
 time.sleep(1)
 print( "=== Reading ===")
 while True:
-	qtr.read( sv )
+	qtr.readCalibrated()
+	sv = qtr.values
 	print( '%4i  %4i  %4i  %4i  %4i  %4i ' % (sv[0],sv[1],sv[2],sv[3],sv[4],sv[5]) )
 	time.sleep_ms(250)

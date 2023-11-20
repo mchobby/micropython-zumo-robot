@@ -21,7 +21,8 @@ See project source @ https://github.com/mchobby/micropython-zumo-robot
 Based on Pololu MazeSolver.ino @
    https://github.com/pololu/zumo-shield-arduino-library/blob/master/examples/MazeSolver/MazeSolver.ino
 
-21 july 2022 - domeu - Arduino to MicroPython portage
+  july 21, 2022 - domeu - Arduino to MicroPython portage
+  june 2,  2023 - domeu - Code optimisation
 """
 from zumoshield import ZumoShield
 from zumoimu import *
@@ -39,15 +40,15 @@ def above_line(sensor):
 # Motor speed when turning. TURN_SPEED should always
 # have a positive value, otherwise the Zumo will turn
 # in the wrong direction.
-TURN_SPEED = 200
+TURN_SPEED = 100
 
 # Motor speed when driving straight. SPEED should always
 # have a positive value, otherwise the Zumo will travel in the
 # wrong direction.
-SPEED = 200
+SPEED = 100
 
 # Thickness of your line in inches
-LINE_THICKNESS = 0.75
+LINE_THICKNESS = 0.78
 
 # When the motor speed of the zumo is set by  motors.setSpeeds(200,200),
 # 200 is in ZUNITs/Second. A ZUNIT is a fictitious measurement of distance
@@ -55,7 +56,7 @@ LINE_THICKNESS = 0.75
 # it was observed that for every inch, there were approximately 17142 ZUNITs.
 # This value will differ depending on setup/battery life and may be adjusted
 # accordingly. This value  was found using a 75:1 HP Motors with batteries partially discharged.
-INCHES_TO_ZUNITS = 17142.0
+INCHES_TO_ZUNITS = 41000.0 # 17142.0
 
 # When the Zumo reaches the end of a segment it needs
 # to find out three things: if it has reached the finish line,
@@ -70,9 +71,11 @@ class MazeSolver(ZumoShield):
 		super().__init__()
 
 		# path[] keeps a log of all the turns made since starting the maze
-		self.path = [""]*100 # char
-		self.path_length = 0 # the length of the path
+		self.path = list()
 
+	@property
+	def path_len( self ):
+		return len( self.path )
 	# --- Helper -------------------------------------------------------------------
 	def turn( self, dir ):
 		""" Turns according to the parameter dir, which should be
@@ -101,8 +104,8 @@ class MazeSolver(ZumoShield):
 				# (white->black and black->white) since the sensor should
 				# pass over 1 line while the robot is turning, the final
 				# count should be 2
-				count += above_line(self.ir.sensors[1]) ^ last_status
-				last_status = above_line(self.ir.sensors[1])
+				count += above_line(self.ir.values[1]) ^ last_status
+				last_status = above_line(self.ir.values[1])
 		elif dir == 'R':
 			# Turn right.
 			self.motors.setSpeeds(TURN_SPEED, -TURN_SPEED)
@@ -110,8 +113,8 @@ class MazeSolver(ZumoShield):
 			# This while loop monitors line position until the turn is complete.
 			while( count < 2 ):
 				self.ir.readLineBlack(); #was readLine()
-				count += above_line(self.ir.sensors[4]) ^ last_status
-				last_status = above_line(self.ir.sensors[4])
+				count += above_line(self.ir.values[4]) ^ last_status
+				last_status = above_line(self.ir.values[4])
 		elif dir == 'S':
 	 		# Don't do anything!
 			pass
@@ -176,11 +179,11 @@ class MazeSolver(ZumoShield):
 			# sensors 0 and 5 for detecting lines going to the left and
 			# right.
 
-			if all( not(above_line[sensor]) for sensor in self.ir.sensors ):
+			if all( not(above_line(sensor)) for sensor in self.ir.values ):
 				# There is no line visible ahead, and we didn't see any
 				# intersection.  Must be a dead end.
 				return
-			elif above_line(self.ir.sensors[0]) or above_line(self.ir.sensors[5]):
+			elif above_line(self.ir.values[0]) or above_line(self.ir.values[5]):
 			 	# Found an intersection.
 				return
 
@@ -207,9 +210,9 @@ class MazeSolver(ZumoShield):
 			self.ir.readLineBlack()
 
 			# Check for left and right exits.
-			if above_line(self.ir.sensors[0]):
+			if above_line(self.ir.values[0]):
 				found_left = 1
-			if above_line(self.ir.sensors[5]):
+			if above_line(self.ir.values[5]):
 				found_right = 1
 
 			# Drive straight a bit more, until we are  approximately in the middle
@@ -221,9 +224,9 @@ class MazeSolver(ZumoShield):
 			self.ir.readLineBlack()
 
 			# Check for left and right exits.
-			if above_line( self.ir.sensors[0] ):
+			if above_line( self.ir.values[0] ):
 			    found_left = 1
-			if above_line( self.ir.sensors[5] ):
+			if above_line( self.ir.values[5] ):
 			    found_right = 1
 
 			# After driving a little further, we
@@ -236,18 +239,18 @@ class MazeSolver(ZumoShield):
 			self.ir.readLineBlack()
 
 			# Check again to see if left or right segment has been found
-			if above_line( self.ir.sensors[0] ):
+			if above_line( self.ir.values[0] ):
 			    found_left = 1
-			if above_line( self.ir.sensors[5] ):
+			if above_line( self.ir.values[5] ):
 			    found_right = 1
 
-			if any( [ above_line(self.ir.sensors[i]) for i in range(1,5)] ):
+			if any( [ above_line(self.ir.values[i]) for i in range(1,5)] ):
 				# if(above_line(sensors[1]) || above_line(sensors[2]) || above_line(sensors[3]) || above_line(sensors[4]))
 				found_straight = 1
 
 			# Check for the ending spot.
 			# If all four middle sensors are on dark black, we have solved the maze.
-			if all( [ above_line(self.ir.sensors[i]) for i in range(1,5)] ):
+			if all( [ above_line(self.ir.values[i]) for i in range(1,5	)] ):
 				# if(above_line(sensors[1]) && above_line(sensors[2]) && above_line(sensors[3]) && above_line(sensors[4]))
 				self.motors.stop()
 				break
@@ -259,8 +262,7 @@ class MazeSolver(ZumoShield):
 			self.turn( dir )
 
 			# Store the intersection in the path variable.
-			self.path[ self.path_length ] = dir
-			self.path_length += 1
+			self.path.append( dir )
 
 			# You should check to make sure that the path_length does not
 			# exceed the bounds of the array.  We'll ignore that in this example.
@@ -269,18 +271,19 @@ class MazeSolver(ZumoShield):
 			self.simplify_path()
 
 	def go_to_finish_line( self ):
-		i = 0
+		start = 0
 		# Turn around if the Zumo is facing the wrong direction.
 		if self.path[0] == 'B':
 			self.turn('B')
-			i+=1
+			start=1
 
-		for i in range( path_length ):
+		for i in range( start, self.path_len ):
 			self.follow_segment()
 
 			# Drive through the intersection.
-			motors.setSpeeds(SPEED, SPEED)
+			self.motors.setSpeeds(SPEED, SPEED)
 			time.sleep_ms( overshoot(LINE_THICKNESS) )
+			self.motors.stop()
 
 			# Make a turn according to the instruction stored in path[i].
 			self.turn( self.path[i] )
@@ -299,13 +302,13 @@ class MazeSolver(ZumoShield):
 		# turns. For example: Right turn + Right turn = (1) Back turn.
 
 		# only simplify the path if the second-to-last turn was a 'B'
-		if (self.path_length < 3) or not( self.path[self.path_length-2] == 'B' ):
+		if (self.path_len < 3) or not( self.path[self.path_len-2] == 'B' ):
 			return
 
 		total_angle = 0
 
 		for i in range( 1, 4 ):
-			_dir = self.path[ self.path_length - i ]
+			_dir = self.path[ self.path_len - i ]
 			if _dir == 'R':
 				total_angle += 90
 				break
@@ -321,16 +324,17 @@ class MazeSolver(ZumoShield):
 
 		# Replace all of those turns with a single one.
 		if total_angle == 0:
-			self.path[self.path_length - 3] = 'S'
+			self.path[self.path_len - 3] = 'S'
 		elif total_angle == 90:
-			self.path[self.path_length - 3] = 'R'
+			self.path[self.path_len - 3] = 'R'
 		elif total_angle == 180:
-			self.path[self.path_length - 3] = 'B'
+			self.path[self.path_len - 3] = 'B'
 		elif total_angle == 270:
-			self.path[self.path_length - 3] = 'L'
+			self.path[self.path_len - 3] = 'L'
 
 		# The path is now two steps shorter.
-		self.path_length -= 2
+		del( self.path[-1] )
+		del( self.path[-1] )
 
 
 # --- Setup --------------------------------------------------------------------
@@ -342,14 +346,22 @@ time.sleep_ms( 500 )
 z.led.on()
 z.button.waitForButton()
 
-# Calibrate the Zumo by sweeping it from left to right
-# note: Replace the original Pololu code with a predefined one
-z.ir_calibration()
-# Turn left.
-z.turn('L')
-z.motors.stop()
-# Sound off buzzer to denote Zumo is finished calibrating
-z.buzzer.play("L16 cdegreg4")
+# Do calibration OR reload existing values
+do_calibrate = False
+
+# Reload calibration data
+if do_calibrate:
+	# Calibrate the Zumo by sweeping it from left to right
+	# note: Replace the original Pololu code with a predefined one
+	z.ir_calibration()
+	# Turn left.
+	z.turn('L')
+	z.motors.stop()
+	# Sound off buzzer to denote Zumo is finished calibrating
+	z.buzzer.play("L16 cdegreg4")
+else:
+	# setup with your predefined calibration data
+	z.ir.calibrationOn.load_json( '{"maximum": [2000, 2000, 1669, 1787, 2000, 2000], "minimum": [365, 365, 262, 260, 371, 371], "initialized": true}' )
 
 # Turn off LED to indicate we are through with calibration
 z.led.off()
@@ -358,13 +370,14 @@ z.led.off()
 # solve_maze() explores every segment of the maze until it finds the finish line.
 z.solve_maze()
 # Sound off buzzer to denote Zumo has solved the maze
-z.buzzer.play(">>a32");
+z.play_2tones()
 
 # The maze has been solved. When the user places the Zumo at the starting line
 # and pushes the Zumo button, the Zumo knows where the finish line is and
 # will automatically navigate.
 while True:
 	z.button.waitForButton()
-	self.go_to_finish_line()
+	print( z.path )
+	z.go_to_finish_line()
 	#Sound off buzzer to denote Zumo is at the finish line.
-	z.buzzer.play(">>a32")
+	z.play_done()

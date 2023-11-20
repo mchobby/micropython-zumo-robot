@@ -1,8 +1,7 @@
-""" RFM69 TEST : EMITTER node
+""" RFM69 RC Zumo : Emitter - joystick remote control
 
-Emit message to the receiver station and wait for ACK (500ms max) over
-RFM69HCW SPI module - EMITTER node
-Must be tested togheter with rfmtest_rx.py setup
+Emit RC remote control messages through RFM69HCW SPI module - RC EMITTER node
+Must be tested togheter with rfm_rc_joy_rx.py or rfm_rc_zumo.py
 
 See GitHub : https://github.com/mchobby/micropython-zumo-robot/tree/main/extras/RFM69
 
@@ -10,7 +9,7 @@ RFM69HCW breakout : https://shop.mchobby.be/product.php?id_product=1390
 RFM69HCW breakout : https://www.adafruit.com/product/3071
 """
 
-from machine import SPI, Pin
+from machine import SPI, Pin, ADC, Signal
 from rfm69 import RFM69
 import time
 
@@ -19,6 +18,12 @@ ENCRYPTION_KEY = b"\x01\x02\x03\x04\x05\x06\x07\x08\x01\x02\x03\x04\x05\x06\x07\
 NODE_ID        = 120 # ID of this node
 RECEIVER_ID    = 100 # ID of the node (Receiver) to be contacted
 
+# Joystick interface
+xpos = ADC(Pin(27))
+ypos = ADC(Pin(26))
+btn = Signal( Pin(21, Pin.IN, Pin.PULL_UP), invert=True )
+
+# RFM69 interface
 spi = SPI(0, miso=Pin(4), mosi=Pin(7), sck=Pin(6), baudrate=50000, polarity=0, phase=0, firstbit=SPI.MSB)
 nss = Pin( 5, Pin.OUT, value=True )
 rst = Pin( 22, Pin.OUT, value=False )
@@ -38,12 +43,10 @@ print( 'Receiver NODE:', RECEIVER_ID )
 # Send a packet and waits for its ACK.
 # Note you can only send a packet up to 60 bytes in length.
 counter = 1
-rfm.ack_retries = 3 # 3 attempt to receive ACK
-rfm.ack_wait    = 0.5 # 500ms, time to wait for ACK
 rfm.destination = RECEIVER_ID # Send to specific node 100
 while True:
-	print("Send message %i!" % counter)
-	ack = rfm.send_with_ack(bytes("Message %i!" % counter , "utf-8") )
-	print("   +->", "ACK received" if ack else "ACK missing" )
+	msg = "%s,%s,%s" % (xpos.read_u16(),ypos.read_u16(),btn.value() )
+	ack = rfm.send(  msg.encode("ASCII") )
+	#print( "sent", counter, msg)
 	counter += 1
 	time.sleep(0.1)

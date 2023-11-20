@@ -1,0 +1,10 @@
+{
+  "urls": [
+    ["pushbutton.py", "github:mchobby/micropython-zumo-robot/lib/pushbutton.py"],
+		["qtrsensors.py", "github:mchobby/micropython-zumo-robot/lib/qtrsensors.py"],
+		["zumobuzzer.py", "github:mchobby/micropython-zumo-robot/lib/zumobuzzer.py"],
+		["zumoimu.py", "github:mchobby/micropython-zumo-robot/lib/zumoimu.py"],
+		["zumoshield.py", "github:mchobby/micropython-zumo-robot/lib/zumoshield.py"]
+  ],
+  "version": "0.0.4"
+}

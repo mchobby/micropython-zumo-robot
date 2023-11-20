@@ -3,13 +3,14 @@
 See project source @ https://github.com/mchobby/micropython-zumo-robot
 
 17 march 2022 - domeu - initial writing
+07 april 2023 - domeu - using compass class
 """
 
 from zumoshield import *
 from zumoimu import *
 import time
 
-SPEED = 100
+SPEED = 120
 
 z = ZumoShield()
 imu = ZumoIMU( z.i2c )
@@ -28,6 +29,6 @@ print( 'Compass min: %s ' % compass.min )
 print( 'Compass max: %s ' % compass.max )
 
 while True:
-	heading = compass.averageHeading()
+	heading = compass.average_heading()
 	print( 'Heading %s degrees' % heading )
 	time.sleep( 0.5 )
