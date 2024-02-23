@@ -33,7 +33,7 @@ See example line_follower.py in the project source
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 __repo__ = "https://github.com/mchobby/micropython-zumo-robot.git"
 
 # Identify the plateform
@@ -218,7 +218,7 @@ class ZumoShield():
 		""" return reference to I2C bus used on Pico Robot """
 		if self.__i2c == None:
 			if is_pico:
-				self.__i2c = I2C(0)
+				self.__i2c = I2C(0, sda=Pin(8), scl=Pin(9)) # MP 1.20 did change default I2C(0) pins assignation!
 			else:
 				self.__i2c = I2C(2)
 		return self.__i2c
